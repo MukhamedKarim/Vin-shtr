@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Алгоритмы Штрассена и Винограда</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        textarea {
+            width: 300px;
+            height: 100px;
+            margin: 10px;
+        }
+        .result {
+            display: grid;
+            gap: 5px;
+            margin: 20px auto;
+            width: max-content;
+        }
+        .result-row {
+            display: flex;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Алгоритмы Штрассена и Винограда</h1>
+    <h3>Матрица A</h3>
+    <textarea id="matrixA"></textarea>
+    <h3>Матрица B</h3>
+    <textarea id="matrixB"></textarea>
+    <br>
+    <button onclick="calculate()">Вычислить</button>
+
+    <h2>Результат по Штрассену</h2>
+    <div class="result" id="result-strassen"></div>
+
+    <h2>Результат по Винограду-Штрассену</h2>
+    <div class="result" id="result-vinograd"></div>
+
+    <script>
+        // Функция для парсинга чисел из строки и дополнения до размера степени двойки
+        function parseMatrix(input) {
+            let nums = input.trim().split(/\s+/).map(Number);
+            let size = Math.ceil(Math.sqrt(nums.length));
+
+            // Округление до ближайшей степени двойки
+            let nextPow = 1;
+            while (nextPow < size) nextPow *= 2;
+
+            let totalElements = nextPow * nextPow;
+            while (nums.length < totalElements) nums.push(0); // дополнение нулями
+
+            // Преобразуем в матрицу
+            let matrix = [];
+            for (let i = 0; i < nextPow; i++) {
+                matrix.push(nums.slice(i * nextPow, (i + 1) * nextPow));
+            }
+
+            return matrix;
+        }
+
+        // Вспомогательные функции
+        function add(A, B) {
+            return A.map((row, i) => row.map((val, j) => val + B[i][j]));
+        }
+
+        function subtract(A, B) {
+            return A.map((row, i) => row.map((val, j) => val - B[i][j]));
+        }
+
+        // Разделение матрицы на 4 подматрицы
+        function split(matrix) {
+            const size = matrix.length / 2;
+            let A11 = [], A12 = [], A21 = [], A22 = [];
+            for (let i = 0; i < size; i++) {
+                A11.push(matrix[i].slice(0, size));
+                A12.push(matrix[i].slice(size));
+                A21.push(matrix[i + size].slice(0, size));
+                A22.push(matrix[i + size].slice(size));
+            }
+            return [A11, A12, A21, A22];
+        }
+
+        // Объединение 4 подматриц в одну
+        function combine(A11, A12, A21, A22) {
+            const size = A11.length;
+            let result = [];
+            for (let i = 0; i < size; i++) {
+                result.push([...A11[i], ...A12[i]]);
+            }
+            for (let i = 0; i < size; i++) {
+                result.push([...A21[i], ...A22[i]]);
+            }
+            return result;
+        }
+
+        // Алгоритм Штрассена 
+        function strassen(A, B) {
+            const n = A.length;
+            if (n === 2) {
+                const [a11, a12, a21, a22] = [A[0][0], A[0][1], A[1][0], A[1][1]];
+                const [b11, b12, b21, b22] = [B[0][0], B[0][1], B[1][0], B[1][1]];
+
+                let D = (a11 + a22) * (b11 + b22);
+                let D1 = (a12 - a22) * (b21 + b22);
+                let D2 = (a21 - a11) * (b11 + b12);
+                let H1 = (a11 + a12) * b22;
+                let H2 = (a21 + a22) * b11;
+                let V1 = a22 * (b21 - b11);
+                let V2 = a11 * (b12 - b22);
+
+                let CR11 = D + D1 + V1 - H1;
+                let CR12 = V2 + H1;
+                let CR21 = V1 + H2;
+                let CR22 = D + D2 + V2 - H2;
+
+                return [[CR11, CR12], [CR21, CR22]];
+            } else {
+                let [A11, A12, A21, A22] = split(A);
+                let [B11, B12, B21, B22] = split(B);
+
+                let D = strassen(add(A11, A22), add(B11, B22));
+                let D1 = strassen(subtract(A12, A22), add(B21, B22));
+                let D2 = strassen(subtract(A21, A11), add(B11, B12));
+                let H1 = strassen(add(A11, A12), B22);
+                let H2 = strassen(add(A21, A22), B11);
+                let V1 = strassen(A22, subtract(B21, B11));
+                let V2 = strassen(A11, subtract(B12, B22));
+
+                let C11 = subtract(add(add(D, D1), V1), H1);
+                let C12 = add(V2, H1);
+                let C21 = add(V1, H2);
+                let C22 = subtract(add(add(D, D2), V2), H2);
+
+                return combine(C11, C12, C21, C22);
+            }
+        }
+
+        // Алгоритм Винограда-Штрассена
+        function vinogradStrassen(A, B) {
+            const n = A.length;
+            if (n === 2) {
+                const [a11, a12, a21, a22] = [A[0][0], A[0][1], A[1][0], A[1][1]];
+                const [b11, b12, b21, b22] = [B[0][0], B[0][1], B[1][0], B[1][1]];
+
+                let S1 = a21 + a22;
+                let S2 = S1 - a11;
+                let S3 = a11 - a21;
+                let S4 = a12 - S2;
+                let S5 = b12 - b11;
+                let S6 = b22 - S5;
+                let S7 = b22 - b12;
+                let S8 = S6 - b21;
+
+                let P1 = S2 * S6;
+                let P2 = a11 * b11;
+                let P3 = a12 * b21;
+                let P4 = S3 * S7;
+                let P5 = S1 * S5;
+                let P6 = S4 * b22;
+                let P7 = a22 * S8;
+
+                let T1 = P1 + P2;
+                let T2 = T1 + P4;
+
+                let C11 = P2 + P3;
+                let C12 = T1 + P5 + P6;
+                let C21 = T2 - P7;
+                let C22 = T2 + P5;
+
+                return [[C11, C12], [C21, C22]];
+            } else {
+                let [A11, A12, A21, A22] = split(A);
+                let [B11, B12, B21, B22] = split(B);
+
+                let S1 = add(A21, A22);
+                let S2 = subtract(S1, A11);
+                let S3 = subtract(A11, A21);
+                let S4 = subtract(A12, S2);
+                let S5 = subtract(B12, B11);
+                let S6 = subtract(B22, S5);
+                let S7 = subtract(B22, B12);
+                let S8 = subtract(S6, B21);
+
+                let P1 = vinogradStrassen(S2, S6);
+                let P2 = vinogradStrassen(A11, B11);
+                let P3 = vinogradStrassen(A12, B21);
+                let P4 = vinogradStrassen(S3, S7);
+                let P5 = vinogradStrassen(S1, S5);
+                let P6 = vinogradStrassen(S4, B22);
+                let P7 = vinogradStrassen(A22, S8);
+
+                let T1 = add(P1, P2);
+                let T2 = add(T1, P4);
+
+                let C11 = add(P2, P3);
+                let C12 = add(add(T1, P5), P6);
+                let C21 = subtract(T2, P7);
+                let C22 = add(T2, P5);
+
+                return combine(C11, C12, C21, C22);
+            }
+        }
+
+        // Отображение результата матрицы на странице
+        function renderMatrix(matrix, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            matrix.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'result-row';
+                row.forEach(val => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.innerText = val;
+                    rowDiv.appendChild(cell);
+                });
+                container.appendChild(rowDiv);
+            });
+        }
+
+        // Главная функция запуска вычислений
+        function calculate() {
+            const matrixA = parseMatrix(document.getElementById('matrixA').value);
+            const matrixB = parseMatrix(document.getElementById('matrixB').value);
+
+            const resultStrassen = strassen(matrixA, matrixB);
+            const resultVinograd = vinogradStrassen(matrixA, matrixB);
+
+            renderMatrix(resultStrassen, 'result-strassen');
+            renderMatrix(resultVinograd, 'result-vinograd');
+        }
+    </script>
+</body>
+</html>
