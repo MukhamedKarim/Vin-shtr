@@ -48,28 +48,33 @@
     <div class="result" id="result-vinograd"></div>
 
     <script>
-        // Функция для парсинга чисел из строки и дополнения до размера степени двойки
+        // Функция для парсинга двумерной матрицы и дополнения нулями до квадратной степени двойки
         function parseMatrix(input) {
-            let nums = input.trim().split(/\s+/).map(Number);
-            let size = Math.ceil(Math.sqrt(nums.length));
+            let lines = input.trim().split(/\n+/);
+            let matrix = lines.map(line => line.trim().split(/\s+/).map(Number));
+            let rows = matrix.length;
+            let cols = Math.max(...matrix.map(row => row.length));
 
-            // Округление до ближайшей степени двойки
+            matrix = matrix.map(row => {
+                while (row.length < cols) row.push(0);
+                return row;
+            });
+
+            let size = Math.max(rows, cols);
             let nextPow = 1;
             while (nextPow < size) nextPow *= 2;
 
-            let totalElements = nextPow * nextPow;
-            while (nums.length < totalElements) nums.push(0); // дополнение нулями
-
-            // Преобразуем в матрицу
-            let matrix = [];
-            for (let i = 0; i < nextPow; i++) {
-                matrix.push(nums.slice(i * nextPow, (i + 1) * nextPow));
+            while (matrix.length < nextPow) {
+                matrix.push(new Array(nextPow).fill(0));
             }
+            matrix = matrix.map(row => {
+                while (row.length < nextPow) row.push(0);
+                return row;
+            });
 
             return matrix;
         }
 
-        // Вспомогательные функции
         function add(A, B) {
             return A.map((row, i) => row.map((val, j) => val + B[i][j]));
         }
@@ -78,7 +83,6 @@
             return A.map((row, i) => row.map((val, j) => val - B[i][j]));
         }
 
-        // Разделение матрицы на 4 подматрицы
         function split(matrix) {
             const size = matrix.length / 2;
             let A11 = [], A12 = [], A21 = [], A22 = [];
@@ -91,7 +95,6 @@
             return [A11, A12, A21, A22];
         }
 
-        // Объединение 4 подматриц в одну
         function combine(A11, A12, A21, A22) {
             const size = A11.length;
             let result = [];
@@ -104,7 +107,6 @@
             return result;
         }
 
-        // Алгоритм Штрассена 
         function strassen(A, B) {
             const n = A.length;
             if (n === 2) {
@@ -146,7 +148,6 @@
             }
         }
 
-        // Алгоритм Винограда-Штрассена
         function vinogradStrassen(A, B) {
             const n = A.length;
             if (n === 2) {
@@ -212,7 +213,6 @@
             }
         }
 
-        // Отображение результата матрицы на странице
         function renderMatrix(matrix, containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -229,7 +229,6 @@
             });
         }
 
-        // Главная функция запуска вычислений
         function calculate() {
             const matrixA = parseMatrix(document.getElementById('matrixA').value);
             const matrixB = parseMatrix(document.getElementById('matrixB').value);
